@@ -1,0 +1,435 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alnikor · Склад — Учёт движения товаров</title>
+<style>
+:root{--blue:#1d4ed8;--bg:#f1f5f9}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,sans-serif}
+body{background:var(--bg);color:#1e293b}
+header{background:var(--blue);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+header h1{font-size:20px}
+header .sub{font-size:12px;opacity:.85}
+header .spacer{flex:1}
+.btn{border:none;border-radius:8px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer}
+.btn-green{background:#059669;color:#fff}.btn-green:hover{background:#047857}
+.btn-ghost{background:rgba(255,255,255,.18);color:#fff;font-size:12px}.btn-ghost:hover{background:rgba(255,255,255,.3)}
+.tabs{display:flex;gap:8px;padding:14px 16px 0;max-width:1200px;margin:0 auto;flex-wrap:wrap}
+.tab{padding:9px 16px;border-radius:8px;font-size:14px;font-weight:600;background:#fff;border:1px solid #cbd5e1;cursor:pointer}
+.tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+main{max-width:1200px;margin:0 auto;padding:16px}
+.filters,.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.filters label{font-size:13px;color:#64748b;font-weight:600}
+.chip{padding:7px 12px;border-radius:8px;font-size:13px;font-weight:600;background:#e2e8f0;border:none;cursor:pointer}
+.chip.active{background:var(--blue);color:#fff}
+select,input[type=date],input[type=text],input[type=number],input[type=password]{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:14px;background:#fff}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.kpi .lbl{font-size:12px;color:#64748b}.kpi .val{font-size:24px;font-weight:700;margin-top:4px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f1f5f9;padding:10px;text-align:left;position:sticky;top:0;font-size:12px;color:#475569}
+td{padding:9px 10px;border-top:1px solid #e2e8f0}
+tr:hover td{background:#f8fafc}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.badge{padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700}
+.b-in{background:#d1fae5;color:#065f46}.b-out{background:#fee2e2;color:#991b1b}
+.total td{background:#f1f5f9;font-weight:700}
+.toast{position:fixed;top:70px;right:16px;background:#0f172a;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;display:none;z-index:99}
+#login{max-width:360px;margin:40px auto}
+#login h2{margin-bottom:12px;font-size:18px}
+#login input{width:100%;margin-bottom:10px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.form-grid label{display:block;font-size:12px;color:#64748b}
+.form-grid input,.form-grid select{width:100%;margin-top:4px}
+footer{text-align:center;font-size:12px;color:#94a3b8;padding:24px}
+.wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:12px;background:#fff;max-height:560px}
+h3.sec{font-size:15px;margin-bottom:10px}
+.err{color:#dc2626;font-size:13px;margin-bottom:8px}
+.link{color:#64748b;font-size:13px;text-decoration:underline;cursor:pointer;background:none;border:none}
+@media(max-width:640px){header h1{font-size:17px}.kpi .val{font-size:19px}}
+svg .axis{font-size:10px;fill:#64748b}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:#475569;margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="t-appTitle">Alnikor · Склад</h1><span class="sub" id="t-appSub">Учёт движения товаров · Аналитика</span>
+  <div class="spacer"></div>
+  <button class="btn btn-green" onclick="exportCSV()">⬇ <span id="t-download">Скачать Excel (CSV)</span></button>
+  <button class="btn btn-ghost" onclick="showAdmin()">🔒 <span id="t-admin">Админ</span></button>
+  <button class="btn btn-ghost" id="langBtn" onclick="toggleLang()">BE</button>
+</header>
+<div class="tabs" id="tabs"></div>
+<main>
+  <div id="loginView" style="display:none">
+    <div class="card" id="login">
+      <h2 id="t-login">Вход для администратора</h2>
+      <div class="err" id="passErr" style="display:none"></div>
+      <input type="password" id="passInput" placeholder="Пароль">
+      <button class="btn btn-green" style="width:100%" id="t-enter" onclick="tryLogin()">Войти</button>
+    </div>
+  </div>
+  <div id="views"></div>
+</main>
+<div class="toast" id="toast"></div>
+<footer>Alnikor · Складской учёт · 2026</footer>
+<script>
+// ================= i18n (RU / BY) =================
+const DICT={
+ ru:{appTitle:"Alnikor · Склад",appSub:"Учёт движения товаров · Аналитика",download:"Скачать Excel (CSV)",admin:"Админ",
+  analytics:"Аналитика",stock:"Склад (остатки)",operations:"Операции",entry:"Ввод данных",
+  period:"Период:",day:"День",week:"Неделя",month:"Месяц",quarter:"Квартал",year:"Год",all:"Всё время",
+  in:"Приход",out:"Расход",kg:"кг",pc:"шт",price:"Цена за 1 кг",sum:"Сумма, сум",
+  totalIn:"Всего приход, кг",totalOut:"Всего расход, кг",stockKg:"Остаток на складе, кг",turnover:"Оборот, сум",
+  byProduct:"По товарам (кг)",byProductSum:"По товарам (сумма)",overTime:"Динамика по времени",
+  product:"Товар",pack:"Упаковка",date:"Дата",type:"Вид операции",state:"Состояние",receivedBy:"Кто принял",
+  transferDate:"Дата передачи",transferredTo:"Кому передано",transferredBy:"Кто передал",gotBy:"Кто получил",note:"Примечание",
+  noData:"Нет данных за выбранный период",search:"Поиск по товару...",allProducts:"Все товары",
+  login:"Вход для администратора",password:"Пароль",enter:"Войти",wrongPass:"Неверный пароль!",logout:"Выйти",
+  addOp:"Новая операция",save:"Сохранить",saved:"Сохранено!",required:"Заполните: товар, вид операции, количество",
+  qtyKg:"Количество, кг",qtyPc:"Количество, шт",
+  monthlyPivot:"Ежемесячный отчёт по товарам (пивот)",total:"ИТОГО",balance:"Остаток",
+  value:"Стоимость остатка, сум",avgPrice:"Ср. цена",reset:"Сбросить данные к исходным из Excel"},
+ be:{appTitle:"Alnikor · Склад",appSub:"Улік руху тавараў · Аналітыка",download:"Спампаваць Excel (CSV)",admin:"Адмін",
+  analytics:"Аналітыка",stock:"Склад (рэшткі)",operations:"Аперацыі",entry:"Увод даных",
+  period:"Перыяд:",day:"Дзень",week:"Тыдзень",month:"Месяц",quarter:"Квартал",year:"Год",all:"Увесь час",
+  in:"Прыход",out:"Расход",kg:"кг",pc:"шт",price:"Цана за 1 кг",sum:"Сума, сум",
+  totalIn:"Усяго прыход, кг",totalOut:"Усяго расход, кг",stockKg:"Рэштак на складзе, кг",turnover:"Абарот, сум",
+  byProduct:"Па таварах (кг)",byProductSum:"Па таварах (сума)",overTime:"Дынаміка па часе",
+  product:"Тавар",pack:"Упакоўка",date:"Дата",type:"Від аперацыі",state:"Стан",receivedBy:"Хто прыняў",
+  transferDate:"Дата перадачы",transferredTo:"Каму перададзена",transferredBy:"Хто перадаў",gotBy:"Хто атрымаў",note:"Заўвага",
+  noData:"Няма даных за выбраны перыяд",search:"Пошук па тавары...",allProducts:"Усе тавары",
+  login:"Уваход для адміністратара",password:"Пароль",enter:"Увайсці",wrongPass:"Няправільны пароль!",logout:"Выйсці",
+  addOp:"Новая аперацыя",save:"Захаваць",saved:"Захавана!",required:"Запоўніце: тавар, від аперацыі, колькасць",
+  qtyKg:"Колькасць, кг",qtyPc:"Колькасць, шт",
+  monthlyPivot:"Штомесячная справаздача па таварах (півот)",total:"РАЗАМ",balance:"Рэштак",
+  value:"Кошт рэштку, сум",avgPrice:"Сяр. цана",reset:"Скінуць даныя да зыходных з Excel"}
+};
+const MONTHS_SHORT={ru:["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"],
+                    be:["Сту","Лют","Сак","Кра","Тра","Чэр","Ліп","Жні","Вер","Кас","Ліс","Снеж"]};
+let lang="ru";
+const t=k=>(DICT[lang][k]!==undefined?DICT[lang][k]:k);
+
+// ================= Data — реальный seed из Excel Alnikor (лист «Октябрь» 2026) =================
+const SEED=[
+ {date:"2026-10-15",type:"in", product:"Лезунец для КРС", pack:"ведро", kg:25, pc:21, price:34910.71, sum:18328122.75, state:"соответствует", receivedBy:"Нодира", transferDate:"", transferredTo:"", transferredBy:"", gotBy:"", note:""},
+ {date:"2026-10-15",type:"in", product:"Концентрат для КРС", pack:"мешок", kg:25, pc:27, price:26562.50, sum:17929678.50, state:"соответствует", receivedBy:"Нодира", transferDate:"", transferredTo:"", transferredBy:"", gotBy:"", note:""},
+ {date:"2026-10-15",type:"in", product:"Добавка кормовая ПРОАМИД", pack:"мешок", kg:25, pc:36, price:36428.57, sum:32785713, state:"соответствует", receivedBy:"Нодира", transferDate:"", transferredTo:"", transferredBy:"", gotBy:"", note:""},
+ {date:"2026-10-15",type:"in", product:"Алнисон", pack:"мешок", kg:15, pc:3, price:0, sum:0, state:"соответствует", receivedBy:"Нодира", transferDate:"", transferredTo:"", transferredBy:"", gotBy:"", note:""}
+];
+const KEY="alnikor_ops_v2";
+let ops=[];
+try{const s=localStorage.getItem(KEY);ops=s?JSON.parse(s):JSON.parse(JSON.stringify(SEED));}catch(e){ops=JSON.parse(JSON.stringify(SEED));}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(ops));}catch(e){}}
+
+// ================= State =================
+let view="analytics", mode="month", refDate=new Date().toISOString().slice(0,10),
+    prodFilter="", search="", adminIn=false;
+const fmt=n=>Number(n||0).toLocaleString("ru-RU",{maximumFractionDigits:2});
+
+// ================= Helpers =================
+function periodBounds(m,ref){
+  const d=new Date(ref);
+  if(m==="day")return[new Date(d.getFullYear(),d.getMonth(),d.getDate()),new Date(d.getFullYear(),d.getMonth(),d.getDate()+1)];
+  if(m==="week"){return[new Date(d.getFullYear(),d.getMonth(),d.getDate()-6),new Date(d.getFullYear(),d.getMonth(),d.getDate()+1)];}
+  if(m==="month")return[new Date(d.getFullYear(),d.getMonth(),1),new Date(d.getFullYear(),d.getMonth()+1,1)];
+  if(m==="quarter")return[new Date(d.getFullYear(),Math.floor(d.getMonth()/3)*3,1),new Date(d.getFullYear(),Math.floor(d.getMonth()/3)*3+3,1)];
+  if(m==="year")return[new Date(d.getFullYear(),0,1),new Date(d.getFullYear()+1,0,1)];
+  return[new Date(2000,0,1),new Date(2100,0,1)];
+}
+function inPeriod(list){
+  if(mode==="all")return list;
+  const b=periodBounds(mode,refDate),s=b[0],e=b[1];
+  return list.filter(o=>{const d=new Date(o.date);return d>=s&&d<e;});
+}
+const products=()=>Array.from(new Set(ops.map(o=>o.product))).sort();
+function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.style.display="block";setTimeout(()=>el.style.display="none",2200);}
+
+// ================= Aggregations =================
+function kpis(){
+  const list=inPeriod(ops).filter(o=>!prodFilter||o.product===prodFilter);
+  let kin=0,kout=0,vin=0,vout=0;
+  list.forEach(o=>{if(o.type==="in"){kin+=+o.kg||0;vin+=+o.sum||0;}else{kout+=+o.kg||0;vout+=+o.sum||0;}});
+  return{kin:kin,kout:kout,vin:vin,vout:vout,stock:kin-kout,value:vin-vout};
+}
+function byProduct(){
+  const m={};
+  inPeriod(ops).filter(o=>!prodFilter||o.product===prodFilter).forEach(o=>{
+    const r=m[o.product]||(m[o.product]={product:o.product,in:0,out:0,sum:0});
+    if(o.type==="in"){r.in+=+o.kg||0;r.sum+=+o.sum||0;}else{r.out+=+o.kg||0;r.sum-=+o.sum||0;}
+  });
+  return Object.values(m).sort((a,b)=>(b.in+b.out)-(a.in+a.out));
+}
+function overTime(){
+  const per=(mode==="day"||mode==="week")?"day":"month";
+  const m={};
+  inPeriod(ops).filter(o=>!prodFilter||o.product===prodFilter).forEach(o=>{
+    const d=new Date(o.date);
+    const name=per==="day"?String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0")
+      :MONTHS_SHORT[lang][d.getMonth()]+" "+String(d.getFullYear()).slice(2);
+    const r=m[name]||(m[name]={name:name,in:0,out:0});
+    if(o.type==="in")r.in+=+o.kg||0;else r.out+=+o.kg||0;
+  });
+  return Object.values(m).sort((a,b)=>a.name.localeCompare(b.name));
+}
+function stockRows(){
+  const m={};
+  ops.forEach(o=>{
+    const r=m[o.product]||(m[o.product]={product:o.product,pack:o.pack,kin:0,kout:0,pcin:0,pcout:0,vin:0});
+    if(o.type==="in"){r.kin+=+o.kg||0;r.pcin+=+o.pc||0;r.vin+=+o.sum||0;}
+    else{r.kout+=+o.kg||0;r.pcout+=+o.pc||0;}
+  });
+  return Object.values(m).filter(r=>!prodFilter||r.product===prodFilter)
+    .filter(r=>!search||r.product.toLowerCase().includes(search.toLowerCase()))
+    .map(r=>({product:r.product,pack:r.pack,kin:r.kin,kout:r.kout,pcin:r.pcin,pcout:r.pcout,
+      balance:r.kin-r.kout,avg:r.kin>0?r.vin/r.kin:0,
+      value:(r.kin-r.kout)*(r.kin>0?r.vin/r.kin:0)}))
+    .sort((a,b)=>a.product.localeCompare(b.product));
+}
+
+// ================= Inline SVG charts (без внешних библиотек) =================
+function svgBarChart(labels,series){ // series: [{name,color,values}]
+  const W=560,H=220,padL=46,padB=38,padT=12;
+  const max=Math.max(1,...series.flatMap(s=>s.values));
+  const n=labels.length,gw=(W-padL-10)/Math.max(1,n),bw=Math.max(4,gw/(series.length+0.6));
+  let g='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">';
+  for(let i=0;i<=4;i++){
+    const y=padT+(H-padT-padB)*i/4, v=max*(1-i/4);
+    g+='<line x1="'+padL+'" y1="'+y+'" x2="'+(W-6)+'" y2="'+y+'" stroke="#e2e8f0"/>'+
+       '<text class="axis" x="'+(padL-4)+'" y="'+(y+3)+'" text-anchor="end">'+fmt(Math.round(v))+'</text>';
+  }
+  labels.forEach((l,i)=>{
+    const x0=padL+gw*i;
+    series.forEach((s,j)=>{
+      const h=(H-padT-padB)*(s.values[i]/max),x=x0+j*bw;
+      g+='<rect x="'+x+'" y="'+(H-padB-h)+'" width="'+(bw-1.5)+'" height="'+Math.max(h,0)+'" fill="'+s.color+'"><title>'+s.name+': '+fmt(s.values[i])+'</title></rect>';
+    });
+    if(labels.length<=14)g+='<text class="axis" x="'+(x0+gw/2)+'" y="'+(H-padB+13)+'" text-anchor="middle">'+l.slice(0,12)+'</text>';
+  });
+  g+='</svg><div class="legend">'+series.map(s=>'<span><i style="background:'+s.color+'"></i>'+s.name+'</span>').join("")+'</div>';
+  return g;
+}
+function svgLineChart(labels,series){
+  const W=560,H=200,padL=46,padB=28,padT=12;
+  const max=Math.max(1,...series.flatMap(s=>s.values));
+  const n=Math.max(1,labels.length-1);
+  let g='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">';
+  for(let i=0;i<=4;i++){
+    const y=padT+(H-padT-padB)*i/4,v=max*(1-i/4);
+    g+='<line x1="'+padL+'" y1="'+y+'" x2="'+(W-6)+'" y2="'+y+'" stroke="#e2e8f0"/>'+
+       '<text class="axis" x="'+(padL-4)+'" y="'+(y+3)+'" text-anchor="end">'+fmt(Math.round(v))+'</text>';
+  }
+  series.forEach(s=>{
+    const pts=s.values.map((v,i)=>[padL+(W-padL-10)*i/n,H-padB-(H-padT-padB)*(v/max)]);
+    g+='<polyline fill="none" stroke="'+s.color+'" stroke-width="2.5" points="'+pts.map(p=>p.join(",")).join(" ")+'"/>';
+    pts.forEach((p,i)=>g+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3.5" fill="'+s.color+'"><title>'+s.name+" "+labels[i]+': '+fmt(s.values[i])+'</title></circle>');
+  });
+  labels.forEach((l,i)=>{if(labels.length<=16)g+='<text class="axis" x="'+(padL+(W-padL-10)*i/n)+'" y="'+(H-padB+14)+'" text-anchor="middle">'+l+'</text>';});
+  g+='</svg><div class="legend">'+series.map(s=>'<span><i style="background:'+s.color+'"></i>'+s.name+'</span>').join("")+'</div>';
+  return g;
+}
+function svgDoughnut(labels,values,colors){
+  const total=Math.max(1,values.reduce((a,b)=>a+Math.max(0,b),0));
+  const cx=95,cy=95,r=78,ir=48;
+  let ang=-Math.PI/2,g='<svg viewBox="0 0 190 190" style="width:190px;height:190px">';
+  values.forEach((v,i)=>{
+    const frac=Math.max(0,v)/total,a2=ang+frac*2*Math.PI;
+    if(frac<=0)return;
+    const large=frac>0.5?1:0;
+    const x1=cx+r*Math.cos(ang),y1=cy+r*Math.sin(ang),x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
+    const x3=cx+ir*Math.cos(a2),y3=cy+ir*Math.sin(a2),x4=cx+ir*Math.cos(ang),y4=cy+ir*Math.sin(ang);
+    g+='<path d="M'+x1+','+y1+' A'+r+','+r+' 0 '+large+' 1 '+x2+','+y2+' L'+x3+','+y3+' A'+ir+','+ir+' 0 '+large+' 0 '+x4+','+y4+' Z" fill="'+colors[i%colors.length]+'"><title>'+labels[i]+': '+fmt(Math.round(v))+' сум ('+Math.round(frac*100)+'%)</title></path>';
+    ang=a2;
+  });
+  g+='</svg>';
+  const legend=labels.map((l,i)=>'<div class="legend"><span><i style="background:'+colors[i%colors.length]+'"></i>'+l+' — '+fmt(Math.round(values[i]))+' сум</span></div>').join("");
+  return '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">'+g+'<div style="flex:1;min-width:150px">'+legend+'</div></div>';
+}
+
+// ================= Render =================
+function renderTabs(){
+  const tabs=[["analytics",t("analytics")],["stock",t("stock")],["operations",t("operations")]];
+  if(adminIn)tabs.push(["entry",t("entry")]);
+  document.getElementById("tabs").innerHTML=tabs.map(function(x){
+    return "<div class='tab "+(view===x[0]?"active":"")+"' onclick=\"view='"+x[0]+"';render()\">"+x[1]+"</div>";}).join("");
+}
+function periodFilterHTML(){
+  const modes=["day","week","month","quarter","year","all"];
+  let h="<label>"+t("period")+"</label>"+modes.map(m=>
+    "<button class='chip "+(mode===m?"active":"")+"' onclick=\"mode='"+m+"';render()\">"+t(m)+"</button>").join("");
+  if(mode!=="all")h+="<input type='date' value='"+refDate+"' onchange='refDate=this.value;render()'>";
+  h+="<select onchange='prodFilter=this.value;render()'><option value=''>"+t("allProducts")+"</option>"+
+     products().map(p=>"<option "+(p===prodFilter?"selected":"")+">"+p+"</option>").join("")+"</select>";
+  return h;
+}
+function tableWrap(inner){return "<div class='wrap'>"+inner+"</div>";}
+
+function renderAnalytics(){
+  const k=kpis(),bp=byProduct(),ot=overTime();
+  const months=Array.from(new Set(ops.map(o=>o.date.slice(0,7)))).sort();
+  document.getElementById("views").innerHTML=
+   "<div class='filters'>"+periodFilterHTML()+"</div>"+
+   "<div class='kpis'>"+
+     "<div class='kpi'><div class='lbl'>"+t("totalIn")+"</div><div class='val' style='color:#059669'>"+fmt(k.kin)+"</div></div>"+
+     "<div class='kpi'><div class='lbl'>"+t("totalOut")+"</div><div class='val' style='color:#dc2626'>"+fmt(k.kout)+"</div></div>"+
+     "<div class='kpi'><div class='lbl'>"+t("stockKg")+"</div><div class='val' style='color:#1d4ed8'>"+fmt(k.stock)+"</div></div>"+
+     "<div class='kpi'><div class='lbl'>"+t("turnover")+"</div><div class='val'>"+fmt(Math.round(k.value))+"</div></div>"+
+   "</div>"+
+   (inPeriod(ops).length===0
+     ?"<div class='card' style='text-align:center;color:#94a3b8;padding:32px'>"+t("noData")+"</div>"
+     :"<div class='grid2'>"+
+        "<div class='card'><h3 class='sec'>"+t("byProduct")+"</h3>"+svgBarChart(bp.map(r=>r.product),
+          [{name:t("in"),color:"#059669",values:bp.map(r=>r.in)},{name:t("out"),color:"#dc2626",values:bp.map(r=>r.out)}])+"</div>"+
+        "<div class='card'><h3 class='sec'>"+t("byProductSum")+"</h3>"+svgDoughnut(bp.map(r=>r.product),bp.map(r=>Math.max(0,Math.round(r.sum))),["#1d4ed8","#059669","#d97706","#dc2626","#7c3aed","#0891b2","#db2777","#65a30d"])+"</div>"+
+      "</div>"+
+      "<div class='card'><h3 class='sec'>"+t("overTime")+"</h3>"+svgLineChart(ot.map(r=>r.name),
+        [{name:t("in"),color:"#059669",values:ot.map(r=>r.in)},{name:t("out"),color:"#dc2626",values:ot.map(r=>r.out)}])+"</div>"+
+      pivotBlock(months,bp));
+}
+function pivotBlock(months,bp){
+  if(!bp.length)return"";
+  let rows="";
+  bp.forEach(function(r){
+    let cells="",tot=0;
+    months.forEach(function(m){
+      const q=ops.filter(o=>o.product===r.product&&o.date.slice(0,7)===m);
+      const v=q.reduce(function(a,o){return a+(o.type==="in"?+o.kg||0:-(+o.kg||0));},0);
+      tot+=v;
+      cells+="<td class='num' style='color:"+(v<0?"#dc2626":v>0?"#059669":"#94a3b8")+"'>"+(v?v:"—")+"</td>";
+    });
+    rows+="<tr><td>"+r.product+"</td>"+cells+"<td class='num'><b>"+tot+"</b></td></tr>";
+  });
+  const head="<tr><th>"+t("product")+"</th>"+months.map(function(m){return "<th>"+MONTHS_SHORT[lang][+m.slice(5)-1]+" "+m.slice(2,4)+"</th>";}).join("")+"<th>"+t("total")+"</th></tr>";
+  return "<div class='card' style='margin-top:14px'><h3 class='sec'>"+t("monthlyPivot")+"</h3>"+tableWrap("<table><thead>"+head+"</thead><tbody>"+rows+"</tbody></table>")+"</div>";
+}
+function renderStock(){
+  const rows=stockRows();
+  let kin=0,kout=0,bal=0,val=0;
+  rows.forEach(r=>{kin+=r.kin;kout+=r.kout;bal+=r.balance;val+=r.value;});
+  document.getElementById("views").innerHTML=
+   "<div class='filters'>"+
+     "<input type='text' placeholder='"+t("search")+"' value='"+search+"' oninput='search=this.value;renderStock()' style='flex:1;min-width:200px'>"+
+     "<select onchange='prodFilter=this.value;render()'><option value=''>"+t("allProducts")+"</option>"+
+       products().map(p=>"<option "+(p===prodFilter?"selected":"")+">"+p+"</option>").join("")+"</select>"+
+   "</div>"+
+   tableWrap("<table><thead><tr><th>"+t("product")+"</th><th>"+t("pack")+"</th><th class='num'>"+t("in")+", "+t("kg")+"</th>"+
+     "<th class='num'>"+t("out")+", "+t("kg")+"</th><th class='num'>"+t("balance")+", "+t("kg")+"</th>"+
+     "<th class='num'>"+t("in")+", "+t("pc")+"</th><th class='num'>"+t("out")+", "+t("pc")+"</th>"+
+     "<th class='num'>"+t("avgPrice")+"</th><th class='num'>"+t("value")+"</th></tr></thead>"+
+   "<tbody>"+rows.map(r=>"<tr><td><b>"+r.product+"</b></td><td>"+(r.pack||"")+"</td>"+
+     "<td class='num' style='color:#059669'>"+fmt(r.kin)+"</td><td class='num' style='color:#dc2626'>"+fmt(r.kout)+"</td>"+
+     "<td class='num'><b>"+fmt(r.balance)+"</b></td><td class='num'>"+fmt(r.pcin)+"</td><td class='num'>"+fmt(r.pcout)+"</td>"+
+     "<td class='num'>"+fmt(Math.round(r.avg))+"</td><td class='num'>"+fmt(Math.round(r.value))+"</td></tr>").join("")+
+   "<tr class='total'><td colspan='2'>"+t("total")+"</td><td class='num'>"+fmt(kin)+"</td><td class='num'>"+fmt(kout)+"</td>"+
+   "<td class='num'>"+fmt(bal)+"</td><td class='num'></td><td class='num'></td><td class='num'></td><td class='num'>"+fmt(Math.round(val))+"</td></tr>"+
+   "</tbody></table>");
+}
+function renderOperations(){
+  const list=inPeriod(ops).filter(o=>!search||o.product.toLowerCase().includes(search.toLowerCase()))
+    .slice().sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById("views").innerHTML=
+   "<div class='filters'>"+
+     "<input type='text' placeholder='"+t("search")+"' value='"+search+"' oninput='search=this.value;renderOperations()' style='flex:1;min-width:200px'>"+
+     "<label>"+t("period")+"</label>"+
+     ["week","month","quarter","year","all"].map(m=>"<button class='chip "+(mode===m?"active":"")+"' onclick=\"mode='"+m+"';render()\">"+t(m)+"</button>").join("")+
+   "</div>"+
+   (list.length===0?"<div class='card' style='text-align:center;color:#94a3b8;padding:32px'>"+t("noData")+"</div>":
+   tableWrap("<table><thead><tr><th>"+t("date")+"</th><th>"+t("type")+"</th><th>"+t("product")+"</th><th>"+t("pack")+"</th>"+
+     "<th class='num'>"+t("qtyKg")+"</th><th class='num'>"+t("qtyPc")+"</th><th class='num'>"+t("price")+"</th><th class='num'>"+t("sum")+"</th>"+
+     "<th>"+t("state")+"</th><th>"+t("receivedBy")+"</th><th>"+t("transferDate")+"</th><th>"+t("transferredTo")+"</th><th>"+t("note")+"</th></tr></thead>"+
+   "<tbody>"+list.map(o=>"<tr><td>"+o.date+"</td>"+
+     "<td><span class='badge "+(o.type==="in"?"b-in":"b-out")+"'>"+(o.type==="in"?t("in"):t("out"))+"</span></td>"+
+     "<td><b>"+o.product+"</b></td><td>"+(o.pack||"")+"</td><td class='num'>"+fmt(o.kg)+"</td><td class='num'>"+fmt(o.pc)+"</td>"+
+     "<td class='num'>"+fmt(o.price)+"</td><td class='num'>"+fmt(o.sum)+"</td><td>"+(o.state||"")+"</td><td>"+(o.receivedBy||"")+"</td>"+
+     "<td>"+(o.transferDate||"")+"</td><td>"+(o.transferredTo||"")+"</td><td>"+(o.note||"")+"</td></tr>").join("")+"</tbody></table>"));
+}
+function renderEntry(){
+  document.getElementById("views").innerHTML=
+   "<div class='card'>"+
+     "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'>"+
+       "<h3 class='sec'>"+t("addOp")+"</h3>"+
+       "<button class='link' onclick=\"adminIn=false;view='analytics';render()\">"+t("logout")+"</button>"+
+     "</div>"+
+     "<div class='form-grid'>"+
+       "<label>"+t("date")+"<input type='date' id='f-date' value='"+new Date().toISOString().slice(0,10)+"'></label>"+
+       "<label>"+t("type")+"<select id='f-type'><option value='in'>"+t("in")+"</option><option value='out'>"+t("out")+"</option></select></label>"+
+       "<label>"+t("product")+"<input list='prods' id='f-product'><datalist id='prods'>"+products().map(p=>"<option value='"+p+"'>").join("")+"</datalist></label>"+
+       "<label>"+t("pack")+"<input list='packs' id='f-pack'><datalist id='packs'><option>мешок</option><option>ведро</option><option>канистра</option></datalist></label>"+
+       "<label>"+t("qtyKg")+"<input type='number' id='f-kg' step='0.01'></label>"+
+       "<label>"+t("qtyPc")+"<input type='number' id='f-pc'></label>"+
+       "<label>"+t("price")+"<input type='number' id='f-price' step='0.01'></label>"+
+       "<label>"+t("state")+"<input id='f-state' value='соответствует'></label>"+
+       "<label>"+t("receivedBy")+"<input id='f-receivedBy'></label>"+
+       "<label>"+t("transferDate")+"<input type='date' id='f-transferDate'></label>"+
+       "<label>"+t("transferredTo")+"<input id='f-transferredTo'></label>"+
+       "<label>"+t("transferredBy")+"<input id='f-transferredBy'></label>"+
+       "<label>"+t("gotBy")+"<input id='f-gotBy'></label>"+
+       "<label>"+t("note")+"<input id='f-note'></label>"+
+     "</div>"+
+     "<div style='margin-top:14px;display:flex;gap:10px;flex-wrap:wrap'>"+
+       "<button class='btn btn-green' onclick='addOp()'>"+t("save")+"</button>"+
+       "<button class='link' onclick='resetData()'>"+t("reset")+"</button>"+
+     "</div>"+
+   "</div>";
+}
+function addOp(){
+  const g=id=>document.getElementById(id).value;
+  const product=g("f-product").trim(),type=g("f-type"),kg=+g("f-kg")||0,pc=+g("f-pc")||0,price=+g("f-price")||0;
+  if(!product||(!kg&&!pc)){toast(t("required"));return;}
+  ops.push({date:g("f-date"),type:type,product:product,pack:g("f-pack"),kg:kg,pc:pc,price:price,
+    sum:Math.round(kg*price*100)/100,state:g("f-state"),receivedBy:g("f-receivedBy"),
+    transferDate:g("f-transferDate"),transferredTo:g("f-transferredTo"),transferredBy:g("f-transferredBy"),
+    gotBy:g("f-gotBy"),note:g("f-note")});
+  save();toast(t("saved"));view="operations";mode="all";render();
+}
+function resetData(){ops=JSON.parse(JSON.stringify(SEED));save();toast(t("saved"));render();}
+
+// ================= Admin =================
+function showAdmin(){if(adminIn){view="entry";render();}else{view="login";render();}}
+function tryLogin(){
+  const v=document.getElementById("passInput").value;
+  if(v==="12345678"){adminIn=true;view="entry";document.getElementById("passErr").style.display="none";render();}
+  else{document.getElementById("passErr").textContent=t("wrongPass");document.getElementById("passErr").style.display="block";}
+}
+
+// ================= Export CSV (Excel) =================
+function exportCSV(){
+  const head=[t("date"),t("type"),t("product"),t("pack"),t("qtyKg"),t("qtyPc"),t("price"),t("sum"),t("state"),t("receivedBy"),t("transferDate"),t("transferredTo"),t("transferredBy"),t("gotBy"),t("note")];
+  const rows=ops.map(o=>[o.date,o.type==="in"?t("in"):t("out"),o.product,o.pack,o.kg,o.pc,o.price,o.sum,o.state,o.receivedBy,o.transferDate,o.transferredTo,o.transferredBy,o.gotBy,o.note]);
+  const esc=v=>'"'+String(v!==undefined&&v!==null?v:"").replace(/"/g,'""')+'"';
+  const csv="\uFEFF"+[head].concat(rows).map(r=>r.map(esc).join(";")).join("\r\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download="alnikor_sklad.csv";a.click();
+}
+
+// ================= Lang & render =================
+function toggleLang(){lang=lang==="ru"?"be":"ru";document.getElementById("langBtn").textContent=lang==="ru"?"BE":"RU";render();}
+function render(){
+  renderTabs();
+  document.getElementById("loginView").style.display=(view==="login"&&!adminIn)?"block":"none";
+  document.getElementById("views").style.display=(view==="login"&&!adminIn)?"none":"block";
+  document.getElementById("t-appTitle").textContent=t("appTitle");
+  document.getElementById("t-appSub").textContent=t("appSub");
+  document.getElementById("t-download").textContent=t("download");
+  document.getElementById("t-admin").textContent=t("admin");
+  document.getElementById("t-login").textContent=t("login");
+  document.getElementById("t-enter").textContent=t("enter");
+  document.getElementById("passInput").placeholder=t("password");
+  if(view==="login")return;
+  if(view==="analytics")renderAnalytics();
+  else if(view==="stock")renderStock();
+  else if(view==="operations")renderOperations();
+  else if(view==="entry"&&adminIn)renderEntry();
+  else{view="analytics";render();}
+}
+document.getElementById("passInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
+render();
+</script>
+</body>
+</html>
