@@ -97,7 +97,8 @@ const DICT={
   value:"Стоимость остатка, сум",avgPrice:"Ср. цена",reset:"Сбросить данные к исходным из Excel",
   devEntry:"Разработчик · Управление записями",devRole:"Разработчик",admRole:"Администратор",
   edit:"Изменить",del:"Удалить",confirmDel:"Удалить эту запись безвозвратно?",editing:"Редактирование записи #",
-  cancelEdit:"Отмена",devHint:"Полный доступ: можно изменять и удалять любые записи, включая прошлые дни."},
+  cancelEdit:"Отмена",devHint:"Полный доступ: можно изменять и удалять любые записи, включая прошлые дни.",
+  unitLbl:"Показатель:",unitKg:"кг",unitPc:"шт (упаковки)",unitSum:"сум (сумма)"},
  be:{appTitle:"Alnikor · Склад",appSub:"Улік руху тавараў · Аналітыка",download:"Спампаваць Excel (CSV)",admin:"Адмін",
   analytics:"Аналітыка",stock:"Склад (рэшткі)",operations:"Аперацыі",entry:"Увод даных",
   period:"Перыяд:",day:"Дзень",week:"Тыдзень",month:"Месяц",quarter:"Квартал",year:"Год",all:"Увесь час",
@@ -114,7 +115,8 @@ const DICT={
   value:"Кошт рэштку, сум",avgPrice:"Сяр. цана",reset:"Скінуць даныя да зыходных з Excel",
   devEntry:"Распрацоўшчык · Кіраванне запісамі",devRole:"Распрацоўшчык",admRole:"Адміністратар",
   edit:"Змяніць",del:"Выдаліць",confirmDel:"Выдаліць гэты запіс незваротна?",editing:"Рэдагаванне запісу #",
-  cancelEdit:"Адмена",devHint:"Поўны доступ: можна змяняць і выдаляць любыя запісы, у тым ліку мінулыя дні."},
+  cancelEdit:"Адмена",devHint:"Поўны доступ: можна змяняць і выдаляць любыя запісы, у тым ліку мінулыя дні.",
+  unitLbl:"Паказальнік:",unitKg:"кг",unitPc:"шт (упакоўкі)",unitSum:"сум (сума)"},
 };
 const MONTHS_SHORT={ru:["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"],
                     be:["Сту","Лют","Сак","Кра","Тра","Чэр","Ліп","Жні","Вер","Кас","Ліс","Снеж"]};
@@ -137,7 +139,7 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(ops));}catch(e){}}
 
 // ================= State =================
 let view="analytics", mode="month", refDate=new Date().toISOString().slice(0,10),
-    prodFilter="", search="", adminIn=false, devIn=false, editingId=null;
+    prodFilter="", search="", adminIn=false, devIn=false, editingId=null, unit="kg";
 const fmt=n=>Number(n||0).toLocaleString("ru-RU",{maximumFractionDigits:2});
 
 // ================= Helpers =================
@@ -159,17 +161,19 @@ const products=()=>Array.from(new Set(ops.map(o=>o.product))).sort();
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.style.display="block";setTimeout(()=>el.style.display="none",2200);}
 
 // ================= Aggregations =================
+function metric(o){return unit==="kg"?+o.kg||0:unit==="pc"?+o.pc||0:+o.sum||0;}
+function unitLbl(){return unit==="kg"?t("unitKg"):unit==="pc"?t("unitPc"):t("unitSum");}
 function kpis(){
   const list=inPeriod(ops).filter(o=>!prodFilter||o.product===prodFilter);
   let kin=0,kout=0,vin=0,vout=0;
-  list.forEach(o=>{if(o.type==="in"){kin+=+o.kg||0;vin+=+o.sum||0;}else{kout+=+o.kg||0;vout+=+o.sum||0;}});
+  list.forEach(o=>{if(o.type==="in"){kin+=metric(o);vin+=+o.sum||0;}else{kout+=metric(o);vout+=+o.sum||0;}});
   return{kin:kin,kout:kout,vin:vin,vout:vout,stock:kin-kout,value:vin-vout};
 }
 function byProduct(){
   const m={};
   inPeriod(ops).filter(o=>!prodFilter||o.product===prodFilter).forEach(o=>{
     const r=m[o.product]||(m[o.product]={product:o.product,in:0,out:0,sum:0});
-    if(o.type==="in"){r.in+=+o.kg||0;r.sum+=+o.sum||0;}else{r.out+=+o.kg||0;r.sum-=+o.sum||0;}
+    if(o.type==="in"){r.in+=metric(o);r.sum+=unit==="pc"?Math.max(0,metric(o)):metric(o);}else{r.out+=metric(o);r.sum-=metric(o);}
   });
   return Object.values(m).sort((a,b)=>(b.in+b.out)-(a.in+a.out));
 }
@@ -181,7 +185,7 @@ function overTime(){
     const name=per==="day"?String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0")
       :MONTHS_SHORT[lang][d.getMonth()]+" "+String(d.getFullYear()).slice(2);
     const r=m[name]||(m[name]={name:name,in:0,out:0});
-    if(o.type==="in")r.in+=+o.kg||0;else r.out+=+o.kg||0;
+    if(o.type==="in")r.in+=metric(o);else r.out+=metric(o);
   });
   return Object.values(m).sort((a,b)=>a.name.localeCompare(b.name));
 }
@@ -241,7 +245,7 @@ function svgLineChart(labels,series){
   g+='</svg><div class="legend">'+series.map(s=>'<span><i style="background:'+s.color+'"></i>'+s.name+'</span>').join("")+'</div>';
   return g;
 }
-function svgDoughnut(labels,values,colors){
+function svgDoughnut(labels,values,colors,suffix){
   const total=Math.max(1,values.reduce((a,b)=>a+Math.max(0,b),0));
   const cx=95,cy=95,r=78,ir=48;
   let ang=-Math.PI/2,g='<svg viewBox="0 0 190 190" style="width:190px;height:190px">';
@@ -251,11 +255,11 @@ function svgDoughnut(labels,values,colors){
     const large=frac>0.5?1:0;
     const x1=cx+r*Math.cos(ang),y1=cy+r*Math.sin(ang),x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
     const x3=cx+ir*Math.cos(a2),y3=cy+ir*Math.sin(a2),x4=cx+ir*Math.cos(ang),y4=cy+ir*Math.sin(ang);
-    g+='<path d="M'+x1+','+y1+' A'+r+','+r+' 0 '+large+' 1 '+x2+','+y2+' L'+x3+','+y3+' A'+ir+','+ir+' 0 '+large+' 0 '+x4+','+y4+' Z" fill="'+colors[i%colors.length]+'"><title>'+labels[i]+': '+fmt(Math.round(v))+' сум ('+Math.round(frac*100)+'%)</title></path>';
+    g+='<path d="M'+x1+','+y1+' A'+r+','+r+' 0 '+large+' 1 '+x2+','+y2+' L'+x3+','+y3+' A'+ir+','+ir+' 0 '+large+' 0 '+x4+','+y4+' Z" fill="'+colors[i%colors.length]+'"><title>'+labels[i]+': '+fmt(Math.round(v))+' '+(suffix||"сум")+' ('+Math.round(frac*100)+'%)</title></path>';
     ang=a2;
   });
   g+='</svg>';
-  const legend=labels.map((l,i)=>'<div class="legend"><span><i style="background:'+colors[i%colors.length]+'"></i>'+l+' — '+fmt(Math.round(values[i]))+' сум</span></div>').join("");
+  const legend=labels.map((l,i)=>'<div class="legend"><span><i style="background:'+colors[i%colors.length]+'"></i>'+l+' — '+fmt(Math.round(values[i]))+' '+(suffix||"сум")+'</span></div>').join("");
   return '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">'+g+'<div style="flex:1;min-width:150px">'+legend+'</div></div>';
 }
 
@@ -279,24 +283,29 @@ function periodFilterHTML(){
 function tableWrap(inner){return "<div class='wrap'>"+inner+"</div>";}
 
 function renderAnalytics(){
-  const k=kpis(),bp=byProduct(),ot=overTime();
+  const k=kpis(),bp=byProduct(),ot=overTime(),ul=unitLbl();
   const months=Array.from(new Set(ops.map(o=>o.date.slice(0,7)))).sort();
   document.getElementById("views").innerHTML=
-   "<div class='filters'>"+periodFilterHTML()+"</div>"+
+   "<div class='filters'>"+periodFilterHTML()+
+     "<label>"+t("unitLbl")+"</label>"+
+     "<select onchange='unit=this.value;render()'>"+
+       ["kg","pc","sum"].map(u=>"<option value='"+u+"' "+(unit===u?"selected":"")+">"+(u==="kg"?t("unitKg"):u==="pc"?t("unitPc"):t("unitSum"))+"</option>").join("")+
+     "</select>"+
+   "</div>"+
    "<div class='kpis'>"+
-     "<div class='kpi'><div class='lbl'>"+t("totalIn")+"</div><div class='val' style='color:#059669'>"+fmt(k.kin)+"</div></div>"+
-     "<div class='kpi'><div class='lbl'>"+t("totalOut")+"</div><div class='val' style='color:#dc2626'>"+fmt(k.kout)+"</div></div>"+
-     "<div class='kpi'><div class='lbl'>"+t("stockKg")+"</div><div class='val' style='color:#1d4ed8'>"+fmt(k.stock)+"</div></div>"+
+     "<div class='kpi'><div class='lbl'>"+t("totalIn")+" ("+ul+")</div><div class='val' style='color:#059669'>"+fmt(k.kin)+"</div></div>"+
+     "<div class='kpi'><div class='lbl'>"+t("totalOut")+" ("+ul+")</div><div class='val' style='color:#dc2626'>"+fmt(k.kout)+"</div></div>"+
+     "<div class='kpi'><div class='lbl'>"+t("stockKg")+" ("+ul+")</div><div class='val' style='color:#1d4ed8'>"+fmt(k.stock)+"</div></div>"+
      "<div class='kpi'><div class='lbl'>"+t("turnover")+"</div><div class='val'>"+fmt(Math.round(k.value))+"</div></div>"+
    "</div>"+
    (inPeriod(ops).length===0
      ?"<div class='card' style='text-align:center;color:#94a3b8;padding:32px'>"+t("noData")+"</div>"
      :"<div class='grid2'>"+
-        "<div class='card'><h3 class='sec'>"+t("byProduct")+"</h3>"+svgBarChart(bp.map(r=>r.product),
+        "<div class='card'><h3 class='sec'>"+t("byProduct")+" ("+ul+")</h3>"+svgBarChart(bp.map(r=>r.product),
           [{name:t("in"),color:"#059669",values:bp.map(r=>r.in)},{name:t("out"),color:"#dc2626",values:bp.map(r=>r.out)}])+"</div>"+
-        "<div class='card'><h3 class='sec'>"+t("byProductSum")+"</h3>"+svgDoughnut(bp.map(r=>r.product),bp.map(r=>Math.max(0,Math.round(r.sum))),["#1d4ed8","#059669","#d97706","#dc2626","#7c3aed","#0891b2","#db2777","#65a30d"])+"</div>"+
+        "<div class='card'><h3 class='sec'>"+t("byProductSum")+" ("+ul+")</h3>"+svgDoughnut(bp.map(r=>r.product),bp.map(r=>Math.max(0,Math.round(r.sum))),["#1d4ed8","#059669","#d97706","#dc2626","#7c3aed","#0891b2","#db2777","#65a30d"],ul)+"</div>"+
       "</div>"+
-      "<div class='card'><h3 class='sec'>"+t("overTime")+"</h3>"+svgLineChart(ot.map(r=>r.name),
+      "<div class='card'><h3 class='sec'>"+t("overTime")+" ("+ul+")</h3>"+svgLineChart(ot.map(r=>r.name),
         [{name:t("in"),color:"#059669",values:ot.map(r=>r.in)},{name:t("out"),color:"#dc2626",values:ot.map(r=>r.out)}])+"</div>"+
       pivotBlock(months,bp));
 }
@@ -307,7 +316,7 @@ function pivotBlock(months,bp){
     let cells="",tot=0;
     months.forEach(function(m){
       const q=ops.filter(o=>o.product===r.product&&o.date.slice(0,7)===m);
-      const v=q.reduce(function(a,o){return a+(o.type==="in"?+o.kg||0:-(+o.kg||0));},0);
+      const v=q.reduce(function(a,o){return a+(o.type==="in"?metric(o):-metric(o));},0);
       tot+=v;
       cells+="<td class='num' style='color:"+(v<0?"#dc2626":v>0?"#059669":"#94a3b8")+"'>"+(v?v:"—")+"</td>";
     });
