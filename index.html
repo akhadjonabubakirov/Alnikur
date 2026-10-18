@@ -94,7 +94,10 @@ const DICT={
   addOp:"Новая операция",save:"Сохранить",saved:"Сохранено!",required:"Заполните: товар, вид операции, количество",
   qtyKg:"Количество, кг",qtyPc:"Количество, шт",
   monthlyPivot:"Ежемесячный отчёт по товарам (пивот)",total:"ИТОГО",balance:"Остаток",
-  value:"Стоимость остатка, сум",avgPrice:"Ср. цена",reset:"Сбросить данные к исходным из Excel"},
+  value:"Стоимость остатка, сум",avgPrice:"Ср. цена",reset:"Сбросить данные к исходным из Excel",
+  devEntry:"Разработчик · Управление записями",devRole:"Разработчик",admRole:"Администратор",
+  edit:"Изменить",del:"Удалить",confirmDel:"Удалить эту запись безвозвратно?",editing:"Редактирование записи #",
+  cancelEdit:"Отмена",devHint:"Полный доступ: можно изменять и удалять любые записи, включая прошлые дни."},
  be:{appTitle:"Alnikor · Склад",appSub:"Улік руху тавараў · Аналітыка",download:"Спампаваць Excel (CSV)",admin:"Адмін",
   analytics:"Аналітыка",stock:"Склад (рэшткі)",operations:"Аперацыі",entry:"Увод даных",
   period:"Перыяд:",day:"Дзень",week:"Тыдзень",month:"Месяц",quarter:"Квартал",year:"Год",all:"Увесь час",
@@ -108,7 +111,10 @@ const DICT={
   addOp:"Новая аперацыя",save:"Захаваць",saved:"Захавана!",required:"Запоўніце: тавар, від аперацыі, колькасць",
   qtyKg:"Колькасць, кг",qtyPc:"Колькасць, шт",
   monthlyPivot:"Штомесячная справаздача па таварах (півот)",total:"РАЗАМ",balance:"Рэштак",
-  value:"Кошт рэштку, сум",avgPrice:"Сяр. цана",reset:"Скінуць даныя да зыходных з Excel"}
+  value:"Кошт рэштку, сум",avgPrice:"Сяр. цана",reset:"Скінуць даныя да зыходных з Excel",
+  devEntry:"Распрацоўшчык · Кіраванне запісамі",devRole:"Распрацоўшчык",admRole:"Адміністратар",
+  edit:"Змяніць",del:"Выдаліць",confirmDel:"Выдаліць гэты запіс незваротна?",editing:"Рэдагаванне запісу #",
+  cancelEdit:"Адмена",devHint:"Поўны доступ: можна змяняць і выдаляць любыя запісы, у тым ліку мінулыя дні."},
 };
 const MONTHS_SHORT={ru:["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"],
                     be:["Сту","Лют","Сак","Кра","Тра","Чэр","Ліп","Жні","Вер","Кас","Ліс","Снеж"]};
@@ -125,11 +131,13 @@ const SEED=[
 const KEY="alnikor_ops_v2";
 let ops=[];
 try{const s=localStorage.getItem(KEY);ops=s?JSON.parse(s):JSON.parse(JSON.stringify(SEED));}catch(e){ops=JSON.parse(JSON.stringify(SEED));}
+ops.forEach(function(o,i){if(o._id===undefined)o._id=i+1;});
+function findOp(id){return ops.find(o=>String(o._id)===String(id));}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(ops));}catch(e){}}
 
 // ================= State =================
 let view="analytics", mode="month", refDate=new Date().toISOString().slice(0,10),
-    prodFilter="", search="", adminIn=false;
+    prodFilter="", search="", adminIn=false, devIn=false, editingId=null;
 const fmt=n=>Number(n||0).toLocaleString("ru-RU",{maximumFractionDigits:2});
 
 // ================= Helpers =================
@@ -255,6 +263,7 @@ function svgDoughnut(labels,values,colors){
 function renderTabs(){
   const tabs=[["analytics",t("analytics")],["stock",t("stock")],["operations",t("operations")]];
   if(adminIn)tabs.push(["entry",t("entry")]);
+  if(devIn)tabs.push(["dev",t("devRole")]);
   document.getElementById("tabs").innerHTML=tabs.map(function(x){
     return "<div class='tab "+(view===x[0]?"active":"")+"' onclick=\"view='"+x[0]+"';render()\">"+x[1]+"</div>";}).join("");
 }
@@ -349,30 +358,33 @@ function renderOperations(){
      "<td>"+(o.transferDate||"")+"</td><td>"+(o.transferredTo||"")+"</td><td>"+(o.note||"")+"</td></tr>").join("")+"</tbody></table>"));
 }
 function renderEntry(){
+  const ed=editingId!==null?findOp(editingId):null;
+  const v=id=>ed?(ed[id]!==undefined?ed[id]:""):((id==="date")?new Date().toISOString().slice(0,10):(id==="state"?"соответствует":""));
   document.getElementById("views").innerHTML=
    "<div class='card'>"+
      "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'>"+
-       "<h3 class='sec'>"+t("addOp")+"</h3>"+
-       "<button class='link' onclick=\"adminIn=false;view='analytics';render()\">"+t("logout")+"</button>"+
+       "<h3 class='sec'>"+(ed?t("editing")+ed._id:t("addOp"))+" <span class='badge b-in'>"+(devIn?t("devRole"):t("admRole"))+"</span></h3>"+
+       "<button class='link' onclick=\"adminIn=false;devIn=false;editingId=null;view='analytics';render()\">"+t("logout")+"</button>"+
      "</div>"+
      "<div class='form-grid'>"+
-       "<label>"+t("date")+"<input type='date' id='f-date' value='"+new Date().toISOString().slice(0,10)+"'></label>"+
-       "<label>"+t("type")+"<select id='f-type'><option value='in'>"+t("in")+"</option><option value='out'>"+t("out")+"</option></select></label>"+
-       "<label>"+t("product")+"<input list='prods' id='f-product'><datalist id='prods'>"+products().map(p=>"<option value='"+p+"'>").join("")+"</datalist></label>"+
-       "<label>"+t("pack")+"<input list='packs' id='f-pack'><datalist id='packs'><option>мешок</option><option>ведро</option><option>канистра</option></datalist></label>"+
-       "<label>"+t("qtyKg")+"<input type='number' id='f-kg' step='0.01'></label>"+
-       "<label>"+t("qtyPc")+"<input type='number' id='f-pc'></label>"+
-       "<label>"+t("price")+"<input type='number' id='f-price' step='0.01'></label>"+
-       "<label>"+t("state")+"<input id='f-state' value='соответствует'></label>"+
-       "<label>"+t("receivedBy")+"<input id='f-receivedBy'></label>"+
-       "<label>"+t("transferDate")+"<input type='date' id='f-transferDate'></label>"+
-       "<label>"+t("transferredTo")+"<input id='f-transferredTo'></label>"+
-       "<label>"+t("transferredBy")+"<input id='f-transferredBy'></label>"+
-       "<label>"+t("gotBy")+"<input id='f-gotBy'></label>"+
-       "<label>"+t("note")+"<input id='f-note'></label>"+
+       "<label>"+t("date")+"<input type='date' id='f-date' value='"+v("date")+"'></label>"+
+       "<label>"+t("type")+"<select id='f-type'><option value='in' "+(ed&&ed.type==="in"?"selected":"")+">"+t("in")+"</option><option value='out' "+(ed&&ed.type==="out"?"selected":"")+">"+t("out")+"</option></select></label>"+
+       "<label>"+t("product")+"<input list='prods' id='f-product' value=\""+(ed?ed.product:"")+"\"><datalist id='prods'>"+products().map(p=>"<option value='"+p+"'>").join("")+"</datalist></label>"+
+       "<label>"+t("pack")+"<input list='packs' id='f-pack' value=\""+v("pack")+"\"><datalist id='packs'><option>мешок</option><option>ведро</option><option>канистра</option></datalist></label>"+
+       "<label>"+t("qtyKg")+"<input type='number' id='f-kg' step='0.01' value='"+v("kg")+"'></label>"+
+       "<label>"+t("qtyPc")+"<input type='number' id='f-pc' value='"+v("pc")+"'></label>"+
+       "<label>"+t("price")+"<input type='number' id='f-price' step='0.01' value='"+v("price")+"'></label>"+
+       "<label>"+t("state")+"<input id='f-state' value='"+v("state")+"'></label>"+
+       "<label>"+t("receivedBy")+"<input id='f-receivedBy' value='"+v("receivedBy")+"'></label>"+
+       "<label>"+t("transferDate")+"<input type='date' id='f-transferDate' value='"+v("transferDate")+"'></label>"+
+       "<label>"+t("transferredTo")+"<input id='f-transferredTo' value=\""+v("transferredTo")+"\"></label>"+
+       "<label>"+t("transferredBy")+"<input id='f-transferredBy' value=\""+v("transferredBy")+"\"></label>"+
+       "<label>"+t("gotBy")+"<input id='f-gotBy' value=\""+v("gotBy")+"\"></label>"+
+       "<label>"+t("note")+"<input id='f-note' value=\""+v("note")+"\"></label>"+
      "</div>"+
      "<div style='margin-top:14px;display:flex;gap:10px;flex-wrap:wrap'>"+
        "<button class='btn btn-green' onclick='addOp()'>"+t("save")+"</button>"+
+       (ed?"<button class='btn' onclick=\"editingId=null;view='dev';render()\">"+t("cancelEdit")+"</button>":"")+
        "<button class='link' onclick='resetData()'>"+t("reset")+"</button>"+
      "</div>"+
    "</div>";
@@ -381,19 +393,56 @@ function addOp(){
   const g=id=>document.getElementById(id).value;
   const product=g("f-product").trim(),type=g("f-type"),kg=+g("f-kg")||0,pc=+g("f-pc")||0,price=+g("f-price")||0;
   if(!product||(!kg&&!pc)){toast(t("required"));return;}
-  ops.push({date:g("f-date"),type:type,product:product,pack:g("f-pack"),kg:kg,pc:pc,price:price,
+  const rec={date:g("f-date"),type:type,product:product,pack:g("f-pack"),kg:kg,pc:pc,price:price,
     sum:Math.round(kg*price*100)/100,state:g("f-state"),receivedBy:g("f-receivedBy"),
     transferDate:g("f-transferDate"),transferredTo:g("f-transferredTo"),transferredBy:g("f-transferredBy"),
-    gotBy:g("f-gotBy"),note:g("f-note")});
+    gotBy:g("f-gotBy"),note:g("f-note")};
+  if(editingId!==null){
+    const i=ops.findIndex(o=>String(o._id)===String(editingId));
+    if(i>=0){rec._id=ops[i]._id;ops[i]=rec;}
+    editingId=null;save();toast(t("saved"));view="dev";mode="all";render();return;
+  }
+  rec._id=ops.reduce((m,o)=>Math.max(m,o._id||0),0)+1;
+  ops.push(rec);
   save();toast(t("saved"));view="operations";mode="all";render();
 }
-function resetData(){ops=JSON.parse(JSON.stringify(SEED));save();toast(t("saved"));render();}
+function resetData(){ops=JSON.parse(JSON.stringify(SEED));ops.forEach(function(o,i){o._id=i+1;});save();toast(t("saved"));render();}
+
+// ================= Developer view =================
+function renderDev(){
+  const list=ops.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById("views").innerHTML=
+   "<div class='card'>"+
+     "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'>"+
+       "<h3 class='sec'>"+t("devEntry")+" <span class='badge b-in'>"+t("devRole")+"</span></h3>"+
+       "<button class='link' onclick=\"adminIn=false;devIn=false;editingId=null;view='analytics';render()\">"+t("logout")+"</button>"+
+     "</div>"+
+     "<p style='color:#64748b;font-size:13px;margin:0 0 12px'>"+t("devHint")+"</p>"+
+   "</div>"+
+   (list.length===0?"<div class='card' style='text-align:center;color:#94a3b8;padding:32px'>"+t("noData")+"</div>":
+   tableWrap("<table><thead><tr><th>#</th><th>"+t("date")+"</th><th>"+t("type")+"</th><th>"+t("product")+"</th>"+
+     "<th class='num'>"+t("qtyKg")+"</th><th class='num'>"+t("qtyPc")+"</th><th class='num'>"+t("sum")+"</th>"+
+     "<th>"+t("note")+"</th><th></th></tr></thead>"+
+   "<tbody>"+list.map(o=>"<tr><td>"+o._id+"</td><td>"+o.date+"</td>"+
+     "<td><span class='badge "+(o.type==="in"?"b-in":"b-out")+"'>"+(o.type==="in"?t("in"):t("out"))+"</span></td>"+
+     "<td><b>"+o.product+"</b></td><td class='num'>"+fmt(o.kg)+"</td><td class='num'>"+fmt(o.pc)+"</td>"+
+     "<td class='num'>"+fmt(o.sum)+"</td><td>"+(o.note||"")+"</td>"+
+     "<td style='white-space:nowrap'><button class='btn' style='padding:4px 10px' onclick=\"editOp('"+o._id+"')\">"+t("edit")+"</button> "+
+     "<button class='btn' style='padding:4px 10px;color:#dc2626' onclick=\"delOp('"+o._id+"')\">"+t("del")+"</button></td></tr>").join("")+"</tbody></table>"));
+}
+function editOp(id){editingId=id;view="entry";render();}
+function delOp(id){
+  if(!confirm(t("confirmDel")))return;
+  ops=ops.filter(o=>String(o._id)!==String(id));
+  save();toast(t("saved"));render();
+}
 
 // ================= Admin =================
-function showAdmin(){if(adminIn){view="entry";render();}else{view="login";render();}}
+function showAdmin(){if(devIn){view="dev";render();}else if(adminIn){view="entry";render();}else{view="login";render();}}
 function tryLogin(){
   const v=document.getElementById("passInput").value;
-  if(v==="12345678"){adminIn=true;view="entry";document.getElementById("passErr").style.display="none";render();}
+  if(v==="123QoRyOg@"){devIn=true;adminIn=true;editingId=null;view="dev";document.getElementById("passErr").style.display="none";render();}
+  else if(v==="12345678"){adminIn=true;view="entry";document.getElementById("passErr").style.display="none";render();}
   else{document.getElementById("passErr").textContent=t("wrongPass");document.getElementById("passErr").style.display="block";}
 }
 
@@ -412,8 +461,8 @@ function exportCSV(){
 function toggleLang(){lang=lang==="ru"?"be":"ru";document.getElementById("langBtn").textContent=lang==="ru"?"BE":"RU";render();}
 function render(){
   renderTabs();
-  document.getElementById("loginView").style.display=(view==="login"&&!adminIn)?"block":"none";
-  document.getElementById("views").style.display=(view==="login"&&!adminIn)?"none":"block";
+  document.getElementById("loginView").style.display=(view==="login"&&!adminIn&&!devIn)?"block":"none";
+  document.getElementById("views").style.display=(view==="login"&&!adminIn&&!devIn)?"none":"block";
   document.getElementById("t-appTitle").textContent=t("appTitle");
   document.getElementById("t-appSub").textContent=t("appSub");
   document.getElementById("t-download").textContent=t("download");
@@ -426,6 +475,7 @@ function render(){
   else if(view==="stock")renderStock();
   else if(view==="operations")renderOperations();
   else if(view==="entry"&&adminIn)renderEntry();
+  else if(view==="dev"&&devIn)renderDev();
   else{view="analytics";render();}
 }
 document.getElementById("passInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
