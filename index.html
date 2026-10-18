@@ -98,7 +98,7 @@ const DICT={
   devEntry:"Разработчик · Управление записями",devRole:"Разработчик",admRole:"Администратор",
   edit:"Изменить",del:"Удалить",confirmDel:"Удалить эту запись безвозвратно?",editing:"Редактирование записи #",
   cancelEdit:"Отмена",devHint:"Полный доступ: можно изменять и удалять любые записи, включая прошлые дни.",
-  unitLbl:"Показатель:",unitKg:"кг",unitPc:"шт (упаковки)",unitSum:"сум (сумма)"},
+  unitLbl:"Показатель:",unitKg:"кг",unitPc:"шт → кг (шт × вес ед.)",unitSum:"сум (сумма)"},
  be:{appTitle:"Alnikor · Склад",appSub:"Улік руху тавараў · Аналітыка",download:"Спампаваць Excel (CSV)",admin:"Адмін",
   analytics:"Аналітыка",stock:"Склад (рэшткі)",operations:"Аперацыі",entry:"Увод даных",
   period:"Перыяд:",day:"Дзень",week:"Тыдзень",month:"Месяц",quarter:"Квартал",year:"Год",all:"Увесь час",
@@ -116,7 +116,7 @@ const DICT={
   devEntry:"Распрацоўшчык · Кіраванне запісамі",devRole:"Распрацоўшчык",admRole:"Адміністратар",
   edit:"Змяніць",del:"Выдаліць",confirmDel:"Выдаліць гэты запіс незваротна?",editing:"Рэдагаванне запісу #",
   cancelEdit:"Адмена",devHint:"Поўны доступ: можна змяняць і выдаляць любыя запісы, у тым ліку мінулыя дні.",
-  unitLbl:"Паказальнік:",unitKg:"кг",unitPc:"шт (упакоўкі)",unitSum:"сум (сума)"},
+  unitLbl:"Паказальнік:",unitKg:"кг",unitPc:"шт → кг (шт × вага адз.)",unitSum:"сум (сума)"},
 };
 const MONTHS_SHORT={ru:["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"],
                     be:["Сту","Лют","Сак","Кра","Тра","Чэр","Ліп","Жні","Вер","Кас","Ліс","Снеж"]};
@@ -161,7 +161,7 @@ const products=()=>Array.from(new Set(ops.map(o=>o.product))).sort();
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.style.display="block";setTimeout(()=>el.style.display="none",2200);}
 
 // ================= Aggregations =================
-function metric(o){return unit==="kg"?+o.kg||0:unit==="pc"?+o.pc||0:+o.sum||0;}
+function metric(o){return unit==="kg"?+o.kg||0:unit==="pc"?(+o.pc||0)*(+o.kg||0):+o.sum||0;}
 function unitLbl(){return unit==="kg"?t("unitKg"):unit==="pc"?t("unitPc"):t("unitSum");}
 function kpis(){
   const list=inPeriod(ops).filter(o=>!prodFilter||o.product===prodFilter);
