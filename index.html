@@ -160,8 +160,11 @@ function inPeriod(list){
   return list.filter(o=>{const d=new Date(o.date);return d>=s&&d<e;});
 }
 const PKEY="alnikor_products_v1";
+const DEFAULT_PRODUCTS=["Концентрат 6-24 с мочевиной","Алнисан с дезинфицирующим и ларвицидным эффектом","Элафид","Ални Плюс",
+  "Энергопак Жидкий","Антистресс","Хелакор Меди","Хелакор Цинка","Хелакор Марганца","Хелакор Железа",
+  "Милка для дойных коров","Милка для высокопродуктивных коров"];
 let customProducts=[];
-try{const cp=localStorage.getItem(PKEY);customProducts=cp?JSON.parse(cp):[];}catch(e){customProducts=[];}
+try{const cp=localStorage.getItem(PKEY);customProducts=cp?JSON.parse(cp):DEFAULT_PRODUCTS.slice();}catch(e){customProducts=DEFAULT_PRODUCTS.slice();}
 function saveProds(){try{localStorage.setItem(PKEY,JSON.stringify(customProducts));}catch(e){}}
 const products=()=>Array.from(new Set(ops.map(o=>o.product).concat(customProducts))).sort();
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.style.display="block";setTimeout(()=>el.style.display="none",2200);}
