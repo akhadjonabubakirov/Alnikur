@@ -98,7 +98,8 @@ const DICT={
   devEntry:"Разработчик · Управление записями",devRole:"Разработчик",admRole:"Администратор",
   edit:"Изменить",del:"Удалить",confirmDel:"Удалить эту запись безвозвратно?",editing:"Редактирование записи #",
   cancelEdit:"Отмена",devHint:"Полный доступ: можно изменять и удалять любые записи, включая прошлые дни.",
-  unitLbl:"Показатель:",unitPc:"кг (шт × вес ед.)",unitSum:"сум (сумма)"},
+  unitLbl:"Показатель:",unitPc:"кг (шт × вес ед.)",unitSum:"сум (сумма)",
+  addProduct:"Добавить товар",newProdPh:"Название нового товара...",prodList:"Товары (из операций + добавленные)",prodAdded:"Товар добавлен!",prodDel:"Удалить товар?",prodEmpty:"Добавленных товаров пока нет"},
  be:{appTitle:"Alnikor · Склад",appSub:"Улік руху тавараў · Аналітыка",download:"Спампаваць Excel (CSV)",admin:"Адмін",
   analytics:"Аналітыка",stock:"Склад (рэшткі)",operations:"Аперацыі",entry:"Увод даных",
   period:"Перыяд:",day:"Дзень",week:"Тыдзень",month:"Месяц",quarter:"Квартал",year:"Год",all:"Увесь час",
@@ -116,7 +117,8 @@ const DICT={
   devEntry:"Распрацоўшчык · Кіраванне запісамі",devRole:"Распрацоўшчык",admRole:"Адміністратар",
   edit:"Змяніць",del:"Выдаліць",confirmDel:"Выдаліць гэты запіс незваротна?",editing:"Рэдагаванне запісу #",
   cancelEdit:"Адмена",devHint:"Поўны доступ: можна змяняць і выдаляць любыя запісы, у тым ліку мінулыя дні.",
-  unitLbl:"Паказальнік:",unitPc:"кг (шт × вага адз.)",unitSum:"сум (сума)"},
+  unitLbl:"Паказальнік:",unitPc:"кг (шт × вага адз.)",unitSum:"сум (сума)",
+  addProduct:"Дадаць тавар",newProdPh:"Назва новага тавару...",prodList:"Тавары (з аперацый + дададзеныя)",prodAdded:"Тавар дададзены!",prodDel:"Выдаліць тавар?",prodEmpty:"Дададзеных тавараў пакуль няма"},
 };
 const MONTHS_SHORT={ru:["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"],
                     be:["Сту","Лют","Сак","Кра","Тра","Чэр","Ліп","Жні","Вер","Кас","Ліс","Снеж"]};
@@ -157,7 +159,11 @@ function inPeriod(list){
   const b=periodBounds(mode,refDate),s=b[0],e=b[1];
   return list.filter(o=>{const d=new Date(o.date);return d>=s&&d<e;});
 }
-const products=()=>Array.from(new Set(ops.map(o=>o.product))).sort();
+const PKEY="alnikor_products_v1";
+let customProducts=[];
+try{const cp=localStorage.getItem(PKEY);customProducts=cp?JSON.parse(cp):[];}catch(e){customProducts=[];}
+function saveProds(){try{localStorage.setItem(PKEY,JSON.stringify(customProducts));}catch(e){}}
+const products=()=>Array.from(new Set(ops.map(o=>o.product).concat(customProducts))).sort();
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.style.display="block";setTimeout(()=>el.style.display="none",2200);}
 
 // ================= Aggregations =================
@@ -427,6 +433,17 @@ function renderDev(){
        "<button class='link' onclick=\"adminIn=false;devIn=false;editingId=null;view='analytics';render()\">"+t("logout")+"</button>"+
      "</div>"+
      "<p style='color:#64748b;font-size:13px;margin:0 0 12px'>"+t("devHint")+"</p>"+
+     "<div style='display:flex;gap:10px;flex-wrap:wrap;align-items:center'>"+
+       "<input type='text' id='newProd' placeholder='"+t("newProdPh")+"' style='flex:1;min-width:200px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px'>"+
+       "<button class='btn btn-green' onclick='addProduct()'>"+t("addProduct")+"</button>"+
+     "</div>"+
+     "<div style='margin-top:10px'>"+t("prodList")+":</div>"+
+     "<div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'>"+
+       (customProducts.length===0
+         ?"<span style='color:#94a3b8;font-size:13px'>"+t("prodEmpty")+"</span>"
+         :customProducts.map(p=>"<span class='badge b-in' style='display:inline-flex;align-items:center;gap:6px'>"+p+
+           " <a style='color:#dc2626;cursor:pointer;font-weight:bold' onclick=\"delProduct('"+p.replace(/'/g,"\\'")+"')\">×</a></span>").join(""))+
+     "</div>"+
    "</div>"+
    (list.length===0?"<div class='card' style='text-align:center;color:#94a3b8;padding:32px'>"+t("noData")+"</div>":
    tableWrap("<table><thead><tr><th>#</th><th>"+t("date")+"</th><th>"+t("type")+"</th><th>"+t("product")+"</th>"+
@@ -440,6 +457,19 @@ function renderDev(){
      "<button class='btn' style='padding:4px 10px;color:#dc2626' onclick=\"delOp('"+o._id+"')\">"+t("del")+"</button></td></tr>").join("")+"</tbody></table>"));
 }
 function editOp(id){editingId=id;view="entry";render();}
+function addProduct(){
+  const el=document.getElementById("newProd");
+  const name=el.value.trim();
+  if(!name){toast(t("required"));return;}
+  if(!customProducts.includes(name))customProducts.push(name);
+  customProducts.sort();
+  saveProds();el.value="";toast(t("prodAdded"));renderDev();
+}
+function delProduct(name){
+  if(!confirm(t("prodDel")+" "+name))return;
+  customProducts=customProducts.filter(p=>p!==name);
+  saveProds();renderDev();
+}
 function delOp(id){
   if(!confirm(t("confirmDel")))return;
   ops=ops.filter(o=>String(o._id)!==String(id));
