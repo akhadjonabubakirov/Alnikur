@@ -98,7 +98,7 @@ const DICT={
   devEntry:"Разработчик · Управление записями",devRole:"Разработчик",admRole:"Администратор",
   edit:"Изменить",del:"Удалить",confirmDel:"Удалить эту запись безвозвратно?",editing:"Редактирование записи #",
   cancelEdit:"Отмена",devHint:"Полный доступ: можно изменять и удалять любые записи, включая прошлые дни.",
-  unitLbl:"Показатель:",unitPc:"кг (шт × вес ед.)",unitSum:"сум (сумма)",
+  unitLbl:"Показатель:",unitPc:"шт (сколько есть)",unitKg:"кг (шт × вес ед.)",unitSum:"сум (кг × цена)",
   addProduct:"Добавить товар",newProdPh:"Название нового товара...",prodList:"Товары (из операций + добавленные)",prodAdded:"Товар добавлен!",prodDel:"Удалить товар?",prodEmpty:"Добавленных товаров пока нет",
   available:"доступен",notAvailable:"недоступен",unitPcs:"шт",
   byProductQty:"Сколько есть каждого товара (шт + выбранный показатель)"},
@@ -119,7 +119,7 @@ const DICT={
   devEntry:"Распрацоўшчык · Кіраванне запісамі",devRole:"Распрацоўшчык",admRole:"Адміністратар",
   edit:"Змяніць",del:"Выдаліць",confirmDel:"Выдаліць гэты запіс незваротна?",editing:"Рэдагаванне запісу #",
   cancelEdit:"Адмена",devHint:"Поўны доступ: можна змяняць і выдаляць любыя запісы, у тым ліку мінулыя дні.",
-  unitLbl:"Паказальнік:",unitPc:"кг (шт × вага адз.)",unitSum:"сум (сума)",
+  unitLbl:"Паказальнік:",unitPc:"шт (колькі ёсць)",unitKg:"кг (шт × вага адз.)",unitSum:"сум (кг × цана)",
   addProduct:"Дадаць тавар",newProdPh:"Назва новага тавару...",prodList:"Тавары (з аперацый + дададзеныя)",prodAdded:"Тавар дададзены!",prodDel:"Выдаліць тавар?",prodEmpty:"Дададзеных тавараў пакуль няма",
   available:"доступны",notAvailable:"недоступны",unitPcs:"шт",
   byProductQty:"Колькі ёсць кожнага тавару (шт + выбраны паказальнік)"},
@@ -174,8 +174,8 @@ const products=()=>Array.from(new Set(ops.map(o=>o.product).concat(customProduct
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.style.display="block";setTimeout(()=>el.style.display="none",2200);}
 
 // ================= Aggregations =================
-function metric(o){return unit==="pc"?(+o.pc||0)*(+o.kg||0):+o.sum||0;}
-function unitLbl(){return unit==="pc"?t("unitPc"):t("unitSum");}
+function metric(o){return unit==="pc"?+o.pc||0:unit==="kg"?(+o.pc||0)*(+o.kg||0):+o.sum||0;}
+function unitLbl(){return unit==="pc"?t("unitPc"):unit==="kg"?t("unitKg"):t("unitSum");}
 function kpis(){
   const list=inPeriod(ops).filter(o=>!prodFilter||o.product===prodFilter);
   let kin=0,kout=0,vin=0,vout=0,pin=0,pout=0;
@@ -186,7 +186,7 @@ function byProduct(){
   const m={};
   inPeriod(ops).filter(o=>!prodFilter||o.product===prodFilter).forEach(o=>{
     const r=m[o.product]||(m[o.product]={product:o.product,in:0,out:0,sum:0,pcin:0,pcout:0});
-    if(o.type==="in"){r.in+=metric(o);r.sum+=unit==="pc"?Math.max(0,metric(o)):metric(o);r.pcin+=+o.pc||0;}else{r.out+=metric(o);r.sum-=metric(o);r.pcout+=+o.pc||0;}
+    if(o.type==="in"){r.in+=metric(o);r.sum+=metric(o);r.pcin+=+o.pc||0;}else{r.out+=metric(o);r.sum-=metric(o);r.pcout+=+o.pc||0;}
   });
   return Object.values(m).sort((a,b)=>(b.in+b.out)-(a.in+a.out));
 }
@@ -302,7 +302,7 @@ function renderAnalytics(){
    "<div class='filters'>"+periodFilterHTML()+
      "<label>"+t("unitLbl")+"</label>"+
      "<select onchange='unit=this.value;render()'>"+
-       ["pc","sum"].map(u=>"<option value='"+u+"' "+(unit===u?"selected":"")+">"+(u==="pc"?t("unitPc"):t("unitSum"))+"</option>").join("")+
+       ["pc","kg","sum"].map(u=>"<option value='"+u+"' "+(unit===u?"selected":"")+">"+(u==="pc"?t("unitPc"):u==="kg"?t("unitKg"):t("unitSum"))+"</option>").join("")+
      "</select>"+
    "</div>"+
    "<div class='kpis'>"+
