@@ -99,7 +99,8 @@ const DICT={
   edit:"Изменить",del:"Удалить",confirmDel:"Удалить эту запись безвозвратно?",editing:"Редактирование записи #",
   cancelEdit:"Отмена",devHint:"Полный доступ: можно изменять и удалять любые записи, включая прошлые дни.",
   unitLbl:"Показатель:",unitPc:"кг (шт × вес ед.)",unitSum:"сум (сумма)",
-  addProduct:"Добавить товар",newProdPh:"Название нового товара...",prodList:"Товары (из операций + добавленные)",prodAdded:"Товар добавлен!",prodDel:"Удалить товар?",prodEmpty:"Добавленных товаров пока нет"},
+  addProduct:"Добавить товар",newProdPh:"Название нового товара...",prodList:"Товары (из операций + добавленные)",prodAdded:"Товар добавлен!",prodDel:"Удалить товар?",prodEmpty:"Добавленных товаров пока нет",
+  available:"доступен",notAvailable:"недоступен"},
  be:{appTitle:"Alnikor · Склад",appSub:"Улік руху тавараў · Аналітыка",download:"Спампаваць Excel (CSV)",admin:"Адмін",
   analytics:"Аналітыка",stock:"Склад (рэшткі)",operations:"Аперацыі",entry:"Увод даных",
   period:"Перыяд:",day:"Дзень",week:"Тыдзень",month:"Месяц",quarter:"Квартал",year:"Год",all:"Увесь час",
@@ -118,7 +119,8 @@ const DICT={
   edit:"Змяніць",del:"Выдаліць",confirmDel:"Выдаліць гэты запіс незваротна?",editing:"Рэдагаванне запісу #",
   cancelEdit:"Адмена",devHint:"Поўны доступ: можна змяняць і выдаляць любыя запісы, у тым ліку мінулыя дні.",
   unitLbl:"Паказальнік:",unitPc:"кг (шт × вага адз.)",unitSum:"сум (сума)",
-  addProduct:"Дадаць тавар",newProdPh:"Назва новага тавару...",prodList:"Тавары (з аперацый + дададзеныя)",prodAdded:"Тавар дададзены!",prodDel:"Выдаліць тавар?",prodEmpty:"Дададзеных тавараў пакуль няма"},
+  addProduct:"Дадаць тавар",newProdPh:"Назва новага тавару...",prodList:"Тавары (з аперацый + дададзеныя)",prodAdded:"Тавар дададзены!",prodDel:"Выдаліць тавар?",prodEmpty:"Дададзеных тавараў пакуль няма",
+  available:"доступны",notAvailable:"недоступны"},
 };
 const MONTHS_SHORT={ru:["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"],
                     be:["Сту","Лют","Сак","Кра","Тра","Чэр","Ліп","Жні","Вер","Кас","Ліс","Снеж"]};
@@ -387,12 +389,12 @@ function renderEntry(){
      "<div class='form-grid'>"+
        "<label>"+t("date")+"<input type='date' id='f-date' value='"+v("date")+"'></label>"+
        "<label>"+t("type")+"<select id='f-type'><option value='in' "+(ed&&ed.type==="in"?"selected":"")+">"+t("in")+"</option><option value='out' "+(ed&&ed.type==="out"?"selected":"")+">"+t("out")+"</option></select></label>"+
-       "<label>"+t("product")+"<input list='prods' id='f-product' value=\""+(ed?ed.product:"")+"\"><datalist id='prods'>"+products().map(p=>"<option value='"+p+"'>").join("")+"</datalist></label>"+
+       "<label>"+t("product")+"<select id='f-product'>"+products().map(p=>"<option "+(ed&&ed.product===p?"selected":"")+">"+p+"</option>").join("")+"</select></label>"+
        "<label>"+t("pack")+"<input list='packs' id='f-pack' value=\""+v("pack")+"\"><datalist id='packs'><option>мешок</option><option>ведро</option><option>канистра</option></datalist></label>"+
        "<label>"+t("qtyKg")+"<input type='number' id='f-kg' step='0.01' value='"+v("kg")+"'></label>"+
        "<label>"+t("qtyPc")+"<input type='number' id='f-pc' value='"+v("pc")+"'></label>"+
        "<label>"+t("price")+"<input type='number' id='f-price' step='0.01' value='"+v("price")+"'></label>"+
-       "<label>"+t("state")+"<input id='f-state' value='"+v("state")+"'></label>"+
+       "<label>"+t("state")+"<select id='f-state'>"+["available","notAvailable"].map(s=>"<option value='"+t(s)+"' "+((ed?(ed.state||""):t("available"))===t(s)?"selected":"")+">"+t(s)+"</option>").join("")+"</select></label>"+
        "<label>"+t("receivedBy")+"<input id='f-receivedBy' value='"+v("receivedBy")+"'></label>"+
        "<label>"+t("transferDate")+"<input type='date' id='f-transferDate' value='"+v("transferDate")+"'></label>"+
        "<label>"+t("transferredTo")+"<input id='f-transferredTo' value=\""+v("transferredTo")+"\"></label>"+
