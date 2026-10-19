@@ -100,7 +100,8 @@ const DICT={
   cancelEdit:"Отмена",devHint:"Полный доступ: можно изменять и удалять любые записи, включая прошлые дни.",
   unitLbl:"Показатель:",unitPc:"кг (шт × вес ед.)",unitSum:"сум (сумма)",
   addProduct:"Добавить товар",newProdPh:"Название нового товара...",prodList:"Товары (из операций + добавленные)",prodAdded:"Товар добавлен!",prodDel:"Удалить товар?",prodEmpty:"Добавленных товаров пока нет",
-  available:"доступен",notAvailable:"недоступен",unitPcs:"шт"},
+  available:"доступен",notAvailable:"недоступен",unitPcs:"шт",
+  byProductQty:"Сколько есть каждого товара (шт + выбранный показатель)"},
  be:{appTitle:"Alnikor · Склад",appSub:"Улік руху тавараў · Аналітыка",download:"Спампаваць Excel (CSV)",admin:"Адмін",
   analytics:"Аналітыка",stock:"Склад (рэшткі)",operations:"Аперацыі",entry:"Увод даных",
   period:"Перыяд:",day:"Дзень",week:"Тыдзень",month:"Месяц",quarter:"Квартал",year:"Год",all:"Увесь час",
@@ -120,7 +121,8 @@ const DICT={
   cancelEdit:"Адмена",devHint:"Поўны доступ: можна змяняць і выдаляць любыя запісы, у тым ліку мінулыя дні.",
   unitLbl:"Паказальнік:",unitPc:"кг (шт × вага адз.)",unitSum:"сум (сума)",
   addProduct:"Дадаць тавар",newProdPh:"Назва новага тавару...",prodList:"Тавары (з аперацый + дададзеныя)",prodAdded:"Тавар дададзены!",prodDel:"Выдаліць тавар?",prodEmpty:"Дададзеных тавараў пакуль няма",
-  available:"доступны",notAvailable:"недоступны",unitPcs:"шт"},
+  available:"доступны",notAvailable:"недоступны",unitPcs:"шт",
+  byProductQty:"Колькі ёсць кожнага тавару (шт + выбраны паказальнік)"},
 };
 const MONTHS_SHORT={ru:["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"],
                     be:["Сту","Лют","Сак","Кра","Тра","Чэр","Ліп","Жні","Вер","Кас","Ліс","Снеж"]};
@@ -319,6 +321,19 @@ function renderAnalytics(){
            {name:t("in")+", "+t("unitPcs"),color:"#10b981",values:bp.map(r=>r.pcin)},{name:t("out")+", "+t("unitPcs"),color:"#f87171",values:bp.map(r=>r.pcout)}])+"</div>"+
         "<div class='card'><h3 class='sec'>"+t("byProductSum")+" ("+ul+")</h3>"+svgDoughnut(bp.map(r=>r.product),bp.map(r=>Math.max(0,Math.round(r.sum))),["#1d4ed8","#059669","#d97706","#dc2626","#7c3aed","#0891b2","#db2777","#65a30d"],ul)+"</div>"+
       "</div>"+
+      "<div class='card'><h3 class='sec'>"+t("byProductQty")+"</h3>"+
+      tableWrap("<table><thead><tr><th>"+t("product")+"</th>"+
+        "<th class='num'>"+t("in")+", "+t("unitPcs")+"</th><th class='num'>"+t("out")+", "+t("unitPcs")+"</th>"+
+        "<th class='num'>"+t("balance")+", "+t("unitPcs")+"</th>"+
+        "<th class='num'>"+t("balance")+", "+ul+"</th></tr></thead><tbody>"+
+      bp.map(r=>"<tr><td><b>"+r.product+"</b></td>"+
+        "<td class='num' style='color:#059669'>"+fmt(r.pcin)+"</td>"+
+        "<td class='num' style='color:#dc2626'>"+fmt(r.pcout)+"</td>"+
+        "<td class='num'><b>"+fmt(r.pcin-r.pcout)+"</b></td>"+
+        "<td class='num'>"+fmt(r.in-r.out)+"</td></tr>").join("")+
+      "<tr class='total'><td>"+t("total")+"</td><td class='num'>"+fmt(k.pin)+"</td><td class='num'>"+fmt(k.pout)+"</td>"+
+        "<td class='num'><b>"+fmt(k.pin-k.pout)+"</b></td><td class='num'>"+fmt(k.stock)+"</td></tr>"+
+      "</tbody></table>")+"</div>"+
       "<div class='card'><h3 class='sec'>"+t("overTime")+" ("+ul+")</h3>"+svgLineChart(ot.map(r=>r.name),
         [{name:t("in"),color:"#059669",values:ot.map(r=>r.in)},{name:t("out"),color:"#dc2626",values:ot.map(r=>r.out)}])+"</div>"+
       pivotBlock(months,bp));
